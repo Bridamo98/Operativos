@@ -13,9 +13,9 @@ typedef struct group
 	
 }group;
 
-struct group* Group(char* id, int cantidadMiembros){
+struct group* Group(char* id, int cantidadMiembros, struct talker** miembros){
 	struct group* grupo=(struct group*)malloc(sizeof(struct group));
-	grupo->miembros=(struct talker**)malloc(cantidadMiembros* sizeof(struct talker*));
+	grupo->miembros=miembros;
 	grupo->cantidadMiembros=cantidadMiembros;
 	strcpy(grupo->id,id);
 	return grupo;

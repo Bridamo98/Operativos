@@ -16,7 +16,7 @@ typedef struct manager
 	//atributos
 	struct talker** usuariosRegistrados;
 	int cantidadRegistrados;
-	struct group* grupos;
+	struct group** grupos;
 	int cantidadGrupos;
 	char* nomPipe;
 	int maximoDeUsuarios;
@@ -31,7 +31,7 @@ manager* Manager(int maximoDeUsuarios, char* nomPipe){
 	gestor->usuariosRegistrados=(struct talker**)malloc(maximoDeUsuarios*sizeof(struct talker*));
 	gestor->cantidadRegistrados=0;
 	gestor->cantidadGrupos=0;
-	gestor->grupos=(struct group*)malloc(maximoDeUsuarios*sizeof(struct group));
+	gestor->grupos=(struct group**)malloc(maximoDeUsuarios*sizeof(struct group*));
 	gestor->maximoDeUsuarios=maximoDeUsuarios;
 	for (int i = 0; i < maximoDeUsuarios; ++i)
 	{
@@ -261,7 +261,49 @@ char* obtenerAmigos(manager* gestor,int myId){
 	}
 	return contenido;
 }
-struct reply* procesar_operacion(int operacion, char** vectorArgumentos, struct request* solicitud, manager* gestor)
+char* crearGrupo(manager* gestor, char** vectorArgumentos, int myId, int tamanoVectorArgumentos){
+	struct  talker** auxMiembrosGrupo=(struct talker**)malloc((tamanoVectorArgumentos-1)*sizeof(struct talker*));
+	char* contenido=(char*)malloc(MAXCONT*sizeof(char));
+
+	char idComoString[5];
+	sprintf(idComoString,"%d",gestor->cantidadGrupos);
+
+	strcat(contenido,"Fue creado el grupo con Id G");
+	strcat(contenido, idComoString);
+	strcat(contenido," e integrantes: ");
+	int idMiembro;
+	int encontrado=0;
+	if(tamanoVectorArgumentos-1!=gestor->usuariosRegistrados[myId-1]->cantidadAmigos){
+		return NULL;
+	}
+	for (int i = 1; i < tamanoVectorArgumentos; ++i)
+	{
+		idMiembro=atoi(vectorArgumentos[i]);
+		if(idMiembro==0){
+			return NULL;
+		}
+		if(gestor->usuariosRegistrados[myId-1]->amigos[idMiembro-1]==NULL){
+			return NULL;
+		}else{
+			if(i!=1){
+				strcat(contenido,", ");
+			}
+			auxMiembrosGrupo[i-1]=gestor->usuariosRegistrados[idMiembro-1];
+			char idComoString2[5];
+			sprintf(idComoString2,"%d",idMiembro);
+			strcat(contenido, idComoString2);
+		}
+	}
+	char* id=(char*)malloc(MAXWORDS*sizeof(char));
+	strcat(id,"G");
+	strcat(id,idComoString);
+	struct group* nuevoGrupo=Group(id,tamanoVectorArgumentos-1,auxMiembrosGrupo);
+	gestor->grupos[gestor->cantidadGrupos]=nuevoGrupo;
+	gestor->cantidadGrupos++;
+
+	return contenido;
+}
+struct reply* procesar_operacion(int operacion, char** vectorArgumentos, struct request* solicitud, manager* gestor, int tamanoVectorArgumentos)
 {
 	if (operacion == 1)
 	{
@@ -293,7 +335,12 @@ struct reply* procesar_operacion(int operacion, char** vectorArgumentos, struct 
 		}
 	}
 	if(operacion==5){
-		
+		char* contenido= crearGrupo(gestor, vectorArgumentos, solicitud->myId, tamanoVectorArgumentos);
+		if(contenido==NULL){
+			return Reply("El grupo no pudo ser creado",0,gestor->usuariosRegistrados[solicitud->myId-1]->nomPipe,0);
+		}else{
+			return Reply(contenido,0,gestor->usuariosRegistrados[solicitud->myId-1]->nomPipe,0);
+		}
 	}
 	if(operacion==6){
 		
@@ -351,7 +398,7 @@ struct reply* procesarSolicitud(struct manager* gestor,struct request* solicitud
 		int operacion = obtenerNumeroDeOperacion(vectorArgumentos,*tamanoVectorArgumentos);
 		if(operacion!=0){
 			printf("Operacion %d\n",operacion);
-			respuesta = procesar_operacion(operacion, vectorArgumentos, solicitud,gestor);
+			respuesta = procesar_operacion(operacion, vectorArgumentos, solicitud,gestor, *tamanoVectorArgumentos);
 			//nota: probar la funcion anterior y procesar cada operacion segun numero
 			printf ("Contenido %s\n", respuesta->contenido);	
 		}else{

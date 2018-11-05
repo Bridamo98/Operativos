@@ -16,7 +16,7 @@ typedef struct request
 	*2.List friends --- hecho
 	*3.List GID
 	*4.Rel IDi --hecho
-	*5.Group ID1, ID2,..,IDN
+	*5.Group ID1, ID2,..,IDN --- hecho
 	*6.Sent msg IDi
 	*7.Sent msg GroupID
 	*8.Salir--- hecho
