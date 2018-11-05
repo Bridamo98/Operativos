@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
 	/*Creacion del manager*/
 	struct manager* gestor=Manager(maximoDeUsuarios,nomPipe);
 	/*Creacion del PIPE*/
-	crearPipe(nomPipe);
+	crearPipeManager(nomPipe);
   	/*Conexión a PIPE en modo lectura*/
   	int lectura;
   	int creado=0;
@@ -72,7 +72,7 @@ int validarArgumentos(int argc, char* argv[]){
 
 void enviarRespuesta(struct reply* respuesta) {
 
-	//aqui se debe lanzar la señal al talker para que reciba la respuesta
+	
 
   	int creado=0, escritura;
   	do {
@@ -88,7 +88,7 @@ void enviarRespuesta(struct reply* respuesta) {
   int flag;
   if(respuesta->eliminacionDePipe){
     //close(escritura);
-    flag=remove(respuesta->nomPipe);
+    flag=unlink(respuesta->nomPipe);
   }
 }
 

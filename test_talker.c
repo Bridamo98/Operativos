@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include <string.h>
 
-void crearPipe(char* nomPipe);
+void crearPipeTalker(char* nomPipe);
 
 int validarArgumentos(int argc, char* argv[]);
 
@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
     	} else creado = 1;
   	} while (creado == 0);
     /*Creación del pipe por donde el manager retornará las respuestas*/
-    crearPipe(nomPipeDeLectura);
+    crearPipeTalker(nomPipeDeLectura);
   	/*Envio al PIPE principal la solicitud de conexion*/
   	printf("pipe como string %s\n", nomPipeDeLectura);//bandera
   	struct request* solicitud=Request(myId,getpid(),nomPipeDeLectura,0);
@@ -66,7 +66,14 @@ int main(int argc, char *argv[])
   	struct reply* respuesta=(struct reply*)malloc(sizeof(struct reply));
   	flag=read(lectura,respuesta,sizeof(struct reply));
   	printf("%s\n", respuesta->contenido);//bandera
-    int salir=1;
+    /*Validar si el talker continuará en ejecución o no*/
+    int salir;
+    printf("eliminacionDePipe %d\n", respuesta->eliminacionDePipe);
+    if(respuesta->validacionDePeticion==0){
+      salir=0;
+    }else{
+      salir=1;
+    }
     char* cadena_operacion;
     while(salir){
       cadena_operacion = (char*)malloc(MAXARG*sizeof(char));
@@ -88,14 +95,13 @@ int main(int argc, char *argv[])
       flag=read(lectura,respuesta,sizeof(struct reply));
       printf("%s\n", respuesta->contenido);
       free(cadena_operacion);
+      if(respuesta->eliminacionDePipe){
+        salir=0;
+      }
     }
-    
-
     /*Cerrar el flujo de lectura y escritura*/
     close(escritura); 
     close(lectura);
-
-
 	return 0;
 }
 
@@ -114,11 +120,11 @@ int validarArgumentos(int argc, char* argv[]){
   return 1;
 }
 
-void crearPipe(char* nomPipe){
+void crearPipeTalker(char* nomPipe){
   mode_t fifo_mode = S_IRUSR | S_IWUSR;
-    unlink(nomPipe); // por si ya existe
+    //unlink(nomPipe); // por si ya existe
     if (mkfifo (nomPipe, fifo_mode) == -1) {
-      perror("mkfifo");
-      exit(1);
+      perror("mkfifo");//QUITAR ESTO DESPUES
+      //exit(1);
     }
 }

@@ -12,14 +12,14 @@ typedef struct request
 	char argumentos[MAXARG];
 	int tipo;//0 = inicio de sesion de un talker ------- 1 = peticion de un talker con sesion ya iniciada
 	/*
-	*1.List
-	*2.List friends
+	*1.List ----- hecho
+	*2.List friends --- hecho
 	*3.List GID
-	*4.Rel IDi
+	*4.Rel IDi --hecho
 	*5.Group ID1, ID2,..,IDN
 	*6.Sent msg IDi
 	*7.Sent msg GroupID
-	*8.Salir
+	*8.Salir--- hecho
 	*/
 
 }request;

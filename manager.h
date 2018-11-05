@@ -17,6 +17,7 @@ typedef struct manager
 	struct talker** usuariosRegistrados;
 	int cantidadRegistrados;
 	struct group* grupos;
+	int cantidadGrupos;
 	char* nomPipe;
 	int maximoDeUsuarios;
 
@@ -29,6 +30,7 @@ manager* Manager(int maximoDeUsuarios, char* nomPipe){
 	manager* gestor=(manager*)malloc(sizeof(manager));
 	gestor->usuariosRegistrados=(struct talker**)malloc(maximoDeUsuarios*sizeof(struct talker*));
 	gestor->cantidadRegistrados=0;
+	gestor->cantidadGrupos=0;
 	gestor->grupos=(struct group*)malloc(maximoDeUsuarios*sizeof(struct group));
 	gestor->maximoDeUsuarios=maximoDeUsuarios;
 	for (int i = 0; i < maximoDeUsuarios; ++i)
@@ -51,7 +53,7 @@ struct talker* buscarTalker(struct manager* gestor,int id){//Esto es opcional(LA
 	return usuarioAux;
 }
 /*Para crear un PIPE dado el nombre*/
-void crearPipe(char* nomPipe){
+void crearPipeManager(char* nomPipe){
 	mode_t fifo_mode = S_IRUSR | S_IWUSR;
   	unlink(nomPipe); // por si ya existe
   	if (mkfifo (nomPipe, fifo_mode) == -1) {
@@ -59,6 +61,7 @@ void crearPipe(char* nomPipe){
     	exit(1);
   	}
 }
+
 /*Separa los parametros de la solicitud por espacios para luego procesar la solicitud*/
 char** separar_cadena(struct request* solicitud, int* tamanoVectorArgumentos)
 {
@@ -196,7 +199,68 @@ char* lista_usuarios_conectados(manager* gestor, int myId)
 	}
 	return contenido;
 }
+void cerrarSesion(manager* gestor,int myId){
+	gestor->usuariosRegistrados[myId-1]->conectado=0;
+}
+char* agregarAmigo(manager* gestor,int myId,char** vectorArgumentos){
+	int idAmigo=atoi(vectorArgumentos[1]);
+	if(gestor->usuariosRegistrados[idAmigo-1]!=NULL){
+		if(gestor->usuariosRegistrados[myId-1]->amigos[idAmigo-1]==NULL){
+			if(gestor->usuariosRegistrados[idAmigo-1]->conectado==1){
+			gestor->usuariosRegistrados[myId-1]->amigos[idAmigo-1]=gestor->usuariosRegistrados[idAmigo-1];
+			gestor->usuariosRegistrados[myId-1]->cantidadAmigos++;
+			printf(" CANTIDAD AMIGOS ACTUAL yo %d\n", gestor->usuariosRegistrados[myId-1]->cantidadAmigos);
 
+			gestor->usuariosRegistrados[idAmigo-1]->amigos[myId-1]=gestor->usuariosRegistrados[myId-1];
+			gestor->usuariosRegistrados[idAmigo-1]->cantidadAmigos++;
+			printf(" CANTIDAD AMIGOS ACTUAL otro %d\n", gestor->usuariosRegistrados[idAmigo-1]->cantidadAmigos);
+			return "Se establecio la relacion";
+			}else{
+				return "El usuario especificado no se encuentra conectado";
+			}	
+		}else{
+			return "El usuario especificado ya fue agregado";
+		}
+		
+	}else{
+		return NULL;
+	}
+}
+char* obtenerAmigos(manager* gestor,int myId){
+	char* contenido = (char*)malloc(MAXCONT*sizeof(char));
+	//contenido = "Los usuario actualmente conectados en el sistema son: ";
+	struct talker** amigos = gestor->usuariosRegistrados[myId-1]->amigos;
+	//printf ("tamaño %d\n", gestor->cantidadRegistrados);
+	int tam = gestor->usuariosRegistrados[myId-1]->cantMaxAmigos;
+	char** indicesAmigos=(char**)malloc(tam*sizeof(char*));
+	int encontrado=0;
+	for (int i = 0; i < tam; i++)
+	{
+		struct talker* t = amigos[i];
+		if(t!=NULL){
+
+			printf("entra a if\n" );
+			if(encontrado){
+				strcat(contenido, ", ");
+			}else{
+				strcat(contenido,"Actualmente mis amigos son: ");
+			}
+			encontrado=1;
+			char idComoString[5];
+			sprintf(idComoString,"%d",t->id);
+			//indicesDeConectados[contadorConectados]=idComoString;
+			printf("id como string %s\n", idComoString);
+			//contadorConectados++;
+			strcat(contenido, idComoString);
+		}
+	}
+	printf(" resultado %s\n", contenido);
+	if(encontrado==0){
+
+		return NULL;
+	}
+	return contenido;
+}
 struct reply* procesar_operacion(int operacion, char** vectorArgumentos, struct request* solicitud, manager* gestor)
 {
 	if (operacion == 1)
@@ -204,13 +268,42 @@ struct reply* procesar_operacion(int operacion, char** vectorArgumentos, struct 
 		char* contenido = lista_usuarios_conectados(gestor,solicitud->myId);
 		if(contenido==NULL){
 			printf("NOM PIPE%s\n", gestor->usuariosRegistrados[solicitud->myId-1]->nomPipe);
-			return Reply("No hay usuarios conectados",0,gestor->usuariosRegistrados[solicitud->myId-1]->nomPipe,0);
+			return Reply("No hay usuarios conectados",1,gestor->usuariosRegistrados[solicitud->myId-1]->nomPipe,0);
 		}else{
 			return Reply(contenido,1,gestor->usuariosRegistrados[solicitud->myId-1]->nomPipe,0);
 		}
 	}
 	if(operacion==2){
-		//PRIMERO SE DEBE HACER AGREGAR AMIGO
+		char* contenido = obtenerAmigos(gestor,solicitud->myId);
+		if(contenido==NULL){
+			return Reply("En el momento no tengo amigos",1,gestor->usuariosRegistrados[solicitud->myId-1]->nomPipe,0);
+		}else{
+			return Reply(contenido,1,gestor->usuariosRegistrados[solicitud->myId-1]->nomPipe,0);
+		}
+	}
+	if(operacion==3){
+		
+	}
+	if(operacion==4){
+		char* contenido = agregarAmigo(gestor,solicitud->myId,vectorArgumentos);
+		if(contenido==NULL){
+			return Reply("El usuario especificado no se encuentra en el sistema",0,gestor->usuariosRegistrados[solicitud->myId-1]->nomPipe,0);
+		}else{
+			return Reply(contenido,0,gestor->usuariosRegistrados[solicitud->myId-1]->nomPipe,0);
+		}
+	}
+	if(operacion==5){
+		
+	}
+	if(operacion==6){
+		
+	}
+	if(operacion==7){
+		
+	}
+	if(operacion==8){
+		cerrarSesion(gestor,solicitud->myId);
+		return Reply("Se ha cerrado la sesion",0,gestor->usuariosRegistrados[solicitud->myId-1]->nomPipe,1);
 	}
 	
 }
@@ -230,7 +323,7 @@ struct reply* procesarSolicitud(struct manager* gestor,struct request* solicitud
 				gestor->cantidadRegistrados++;
 				printf("el talker no ha sido registrado\n");
 				printf("argumentos %s\n", solicitud->argumentos);
-				respuesta=Reply("El usuario a sido registrado",1,solicitud->argumentos,0);
+				respuesta=Reply("El usuario ha sido registrado",1,solicitud->argumentos,0);
 				printf("aqui\n");
 				printf("el nombre del pipe resulta siendo %s\n", respuesta->nomPipe);
 			}else{//El talker SI esta registrado en el sistema
@@ -256,10 +349,15 @@ struct reply* procesarSolicitud(struct manager* gestor,struct request* solicitud
 		char** vectorArgumentos = separar_cadena(solicitud, tamanoVectorArgumentos);
 		printf("tamaño vector %d\n", *tamanoVectorArgumentos);
 		int operacion = obtenerNumeroDeOperacion(vectorArgumentos,*tamanoVectorArgumentos);
-		printf("Operacion %d\n",operacion);
-		respuesta = procesar_operacion(operacion, vectorArgumentos, solicitud,gestor);
-		//nota: probar la funcion anterior y procesar cada operacion segun numero
-		printf ("Contenido %s\n", respuesta->contenido);
+		if(operacion!=0){
+			printf("Operacion %d\n",operacion);
+			respuesta = procesar_operacion(operacion, vectorArgumentos, solicitud,gestor);
+			//nota: probar la funcion anterior y procesar cada operacion segun numero
+			printf ("Contenido %s\n", respuesta->contenido);	
+		}else{
+			respuesta=Reply("El comando ingresado no puede reconocerse",0,gestor->usuariosRegistrados[solicitud->myId-1]->nomPipe,0);
+		}
+		
 
 		
 
