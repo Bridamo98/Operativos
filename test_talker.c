@@ -8,14 +8,25 @@
 #include <signal.h>
 #include <unistd.h>
 #include <string.h>
+int lectura;
 
 void crearPipeTalker(char* nomPipe);
 
 int validarArgumentos(int argc, char* argv[]);
 
+void signalHandler ()
+{
+  char* mensaje=(char*)malloc(MAXCONT*sizeof(char));
+  printf("entra a manejador\n");
+  int flag=read(lectura,mensaje,MAXCONT*sizeof(char));
+  printf("%s\n", mensaje);
+}
+
 int main(int argc, char *argv[])
 {
-	/*Validar los argumentos recibidos*/
+	/*Habilitar recepcion de señales*/
+  signal(SIGUSR1,signalHandler);
+  /*Validar los argumentos recibidos*/
 	if(!validarArgumentos(argc,argv)){
 		printf("\nUsage: talker ID pipeNom\n");
     printf("ID: identificacion del usuario\n");
@@ -52,7 +63,7 @@ int main(int argc, char *argv[])
     printf("despues de escribir\n");//bandera
       
   	/*Conexion al PIPE de recepcion de respuestas*/ 
-  	int lectura;
+  	
   	creado=0;
   	do {
     	lectura = open (nomPipeDeLectura, O_RDONLY);
@@ -74,30 +85,35 @@ int main(int argc, char *argv[])
     }else{
       salir=1;
     }
+    free(respuesta);
+    /*Ciclo de ejecucion del Talker*/
     char* cadena_operacion;
     while(salir){
       cadena_operacion = (char*)malloc(MAXARG*sizeof(char));
-      printf("\nPrompt\n");
-      printf("1.List\n");
-      printf("2.List friends\n");
-      printf("3.List GID\n");
-      printf("4.Rel IDi\n");
-      printf("5.Group ID1, ID2, ..., IDN\n");
-      printf("6.Sent msg IDi\n");
-      printf("7.Sent msg GroupID\n");
-      printf("8.Salir\n");
-      printf("Ingrese la operacion(comando) a realizar:\n");
+      printf("Ingrese la operacion(comando) a realizar(puede apoyarse con el comando Help):");
       fgets (cadena_operacion, MAXARG, stdin);
-      printf("cadena_operacion: %s\n", cadena_operacion);
-      solicitud = Request(myId,getpid(),cadena_operacion,1);
-      flag = write(escritura,solicitud,sizeof(struct request));
-      respuesta=(struct reply*)malloc(sizeof(struct reply));
-      flag=read(lectura,respuesta,sizeof(struct reply));
-      printf("%s\n", respuesta->contenido);
-      free(cadena_operacion);
-      if(respuesta->eliminacionDePipe){
-        salir=0;
-      }
+      cadena_operacion[strcspn(cadena_operacion,"\n")]=0;
+      if(strcmp(cadena_operacion,"Help")==0){
+        printf("1.List\n");
+        printf("2.List friends\n");
+        printf("3.List GID\n");
+        printf("4.Rel IDi\n");
+        printf("5.Group ID1, ID2, ..., IDN\n");
+        printf("6.Sent msg IDi\n");
+        printf("7.Sent msg GroupID\n");
+        printf("8.Salir\n");
+      }else{
+        //printf("cadena_operacion: %s\n", cadena_operacion);
+        solicitud = Request(myId,getpid(),cadena_operacion,1);
+        flag = write(escritura,solicitud,sizeof(struct request));
+        respuesta=(struct reply*)malloc(sizeof(struct reply));
+        flag=read(lectura,respuesta,sizeof(struct reply));
+        printf("%s\n", respuesta->contenido);
+        free(cadena_operacion);
+        if(respuesta->eliminacionDePipe){
+          salir=0;
+        }
+      }   
     }
     /*Cerrar el flujo de lectura y escritura*/
     close(escritura); 

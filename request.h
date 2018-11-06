@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#define MAXARG 30
+#define MAXARG 2000
 
 
 typedef struct request
@@ -14,7 +14,7 @@ typedef struct request
 	/*
 	*1.List ----- hecho
 	*2.List friends --- hecho
-	*3.List GID
+	*3.List GID --- hecho
 	*4.Rel IDi --hecho
 	*5.Group ID1, ID2,..,IDN --- hecho
 	*6.Sent msg IDi

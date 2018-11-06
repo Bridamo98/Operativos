@@ -9,7 +9,7 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <unistd.h>
-#define MAXWORDS 20
+#define MAXWORDS 2000
 
 typedef struct manager
 {
@@ -40,17 +40,6 @@ manager* Manager(int maximoDeUsuarios, char* nomPipe){
 	gestor->nomPipe=(char*)malloc(MAXWORDS*sizeof(char));
 	strcpy(gestor->nomPipe,nomPipe);
 	return gestor;
-}
-/*Se obtiene el apuntador del talker con el id dado*/
-struct talker* buscarTalker(struct manager* gestor,int id){//Esto es opcional(LA BUSQUEDA PUEDE SER DIRECTA)
-	struct talker* usuarioAux=NULL;
-	for (int i = 0; i < gestor->cantidadRegistrados; ++i)
-	{
-		if(gestor->usuariosRegistrados[i]->id==id){
-			usuarioAux=gestor->usuariosRegistrados[i];
-		}
-	}
-	return usuarioAux;
 }
 /*Para crear un PIPE dado el nombre*/
 void crearPipeManager(char* nomPipe){
@@ -102,8 +91,8 @@ int obtenerNumeroDeOperacion(char** vectorArgumentos,int tamanoVectorArgumentos)
 	if (strcmp(vectorArgumentos[0],"Sent") == 0)
 	{
 		printf("Se cumplio-> Sent\n");
-		if (tamanoVectorArgumentos==3){
-			if(atoi(vectorArgumentos[2])!=0){
+		if (tamanoVectorArgumentos >= 3){
+			if(atoi(vectorArgumentos[tamanoVectorArgumentos-1])!=0){
 				return 6;
 			}else{
 				return 7;
@@ -149,7 +138,63 @@ int obtenerNumeroDeOperacion(char** vectorArgumentos,int tamanoVectorArgumentos)
 	printf("No se cumplio nada\n");
 	return 0;
 }
+void enviarMensajeAsincrono(manager* gestor,int idDest,char* contenido){
+	kill(gestor->usuariosRegistrados[idDest-1]->pid,SIGUSR1);
+	sleep(1);
+	int creado=0, escritura;
+  	do {
+    	escritura = open (gestor->usuariosRegistrados[idDest-1]->nomPipe, O_WRONLY|O_NONBLOCK);
+    	if (escritura == -1) {
+        perror("pipe");
+        printf(" Se volvera a intentar despues\n");
+        //printf("PIPE %s\n",respuesta->nomPipe);
+        sleep(1);
+    	} else creado = 1;
+  } while (creado == 0);
+  write(escritura,contenido,MAXCONT*sizeof(char));
 
+  
+}
+void enviarMensajeAsincronoAGrupo(manager* gestor,int myId,struct talker** miembros,int cantidadMiembros,char* contenido){
+	for (int i = 0; i < cantidadMiembros; ++i)
+	{
+		if(miembros[i]->id!=myId){
+			kill(miembros[i]->pid,SIGUSR1);
+		}
+	}
+	sleep(1);
+	int escritura;
+	for (int i = 0; i < cantidadMiembros; ++i)
+	{
+		if(miembros[i]->id!=myId){
+			escritura = open (miembros[i]->nomPipe, O_WRONLY|O_NONBLOCK);
+			write(escritura,contenido,MAXCONT*sizeof(char));
+		}
+	}
+}
+void enviarMensajeAsincronoAGrupoDiferente(manager* gestor,int myId,struct talker** miembros,int cantidadMiembros,char** mensajes){
+	for (int i = 0; i < cantidadMiembros; ++i)
+	{
+		if(miembros[i]->id!=myId){
+			kill(miembros[i]->pid,SIGUSR1);
+			printf("envia senal \n");
+		}
+
+	}
+	sleep(1);
+	int escritura;
+	int contadorMensajes=0;
+	for (int i = 0; i < cantidadMiembros; ++i)
+	{
+		if(miembros[i]->id!=myId){
+			escritura = open (miembros[i]->nomPipe, O_WRONLY|O_NONBLOCK);
+			write(escritura,mensajes[contadorMensajes],MAXCONT*sizeof(char));
+			contadorMensajes++;
+			printf("envia mensaje \n");
+		}
+	}
+	printf("no se traba\n");
+}
 char* lista_usuarios_conectados(manager* gestor, int myId)
 {
 	char* contenido = (char*)malloc(MAXCONT*sizeof(char));
@@ -195,6 +240,7 @@ char* lista_usuarios_conectados(manager* gestor, int myId)
 	printf(" resultado %s\n", contenido);
 	if(encontrado==0){
 
+		free(contenido);
 		return NULL;
 	}
 	return contenido;
@@ -204,6 +250,12 @@ void cerrarSesion(manager* gestor,int myId){
 }
 char* agregarAmigo(manager* gestor,int myId,char** vectorArgumentos){
 	int idAmigo=atoi(vectorArgumentos[1]);
+	char* contenido=(char*)malloc(MAXCONT*sizeof(char));
+	
+	if(myId==idAmigo){
+		free(contenido);
+		return "No es necesario hacer esto";
+	}
 	if(gestor->usuariosRegistrados[idAmigo-1]!=NULL){
 		if(gestor->usuariosRegistrados[myId-1]->amigos[idAmigo-1]==NULL){
 			if(gestor->usuariosRegistrados[idAmigo-1]->conectado==1){
@@ -214,15 +266,26 @@ char* agregarAmigo(manager* gestor,int myId,char** vectorArgumentos){
 			gestor->usuariosRegistrados[idAmigo-1]->amigos[myId-1]=gestor->usuariosRegistrados[myId-1];
 			gestor->usuariosRegistrados[idAmigo-1]->cantidadAmigos++;
 			printf(" CANTIDAD AMIGOS ACTUAL otro %d\n", gestor->usuariosRegistrados[idAmigo-1]->cantidadAmigos);
-			return "Se establecio la relacion";
+
+			strcat(contenido,"Se establece una relacion entre los Talkers ");
+			char idComoString[5];
+			sprintf(idComoString,"%d",myId);
+			strcat(contenido,idComoString);
+			strcat(contenido," y ");
+			strcat(contenido,vectorArgumentos[1]);
+			enviarMensajeAsincrono(gestor,idAmigo,contenido);
+			return contenido;
 			}else{
+				free(contenido);
 				return "El usuario especificado no se encuentra conectado";
 			}	
 		}else{
+			free(contenido);
 			return "El usuario especificado ya fue agregado";
 		}
 		
 	}else{
+		free(contenido);
 		return NULL;
 	}
 }
@@ -257,51 +320,175 @@ char* obtenerAmigos(manager* gestor,int myId){
 	printf(" resultado %s\n", contenido);
 	if(encontrado==0){
 
+		free(contenido);
+		free(indicesAmigos);
 		return NULL;
 	}
 	return contenido;
 }
 char* crearGrupo(manager* gestor, char** vectorArgumentos, int myId, int tamanoVectorArgumentos){
-	struct  talker** auxMiembrosGrupo=(struct talker**)malloc((tamanoVectorArgumentos-1)*sizeof(struct talker*));
+	struct  talker** auxMiembrosGrupo=(struct talker**)malloc((tamanoVectorArgumentos)*sizeof(struct talker*));
 	char* contenido=(char*)malloc(MAXCONT*sizeof(char));
+
+	char** mensajes=(char**)malloc((tamanoVectorArgumentos-1)*sizeof(char*));
+
 
 	char idComoString[5];
 	sprintf(idComoString,"%d",gestor->cantidadGrupos);
 
+	char myIdComoString[5];
+	sprintf(myIdComoString,"%d",myId);
+
 	strcat(contenido,"Fue creado el grupo con Id G");
 	strcat(contenido, idComoString);
-	strcat(contenido," e integrantes: ");
+	strcat(contenido," con integrantes: ");
+	strcat(contenido, myIdComoString);
 	int idMiembro;
 	int encontrado=0;
-	if(tamanoVectorArgumentos-1!=gestor->usuariosRegistrados[myId-1]->cantidadAmigos){
+	auxMiembrosGrupo[0]=gestor->usuariosRegistrados[myId-1];
+
+	char* id=(char*)malloc(MAXWORDS*sizeof(char));
+	strcat(id,"G");
+	strcat(id,idComoString);
+
+	if(tamanoVectorArgumentos-1>gestor->usuariosRegistrados[myId-1]->cantidadAmigos){
+		free(auxMiembrosGrupo);
+		free(contenido);
 		return NULL;
 	}
 	for (int i = 1; i < tamanoVectorArgumentos; ++i)
 	{
 		idMiembro=atoi(vectorArgumentos[i]);
-		if(idMiembro==0){
+		if(idMiembro<1){
+			free(auxMiembrosGrupo);
+			free(contenido);
 			return NULL;
 		}
 		if(gestor->usuariosRegistrados[myId-1]->amigos[idMiembro-1]==NULL){
+			free(auxMiembrosGrupo);
+			free(contenido);
 			return NULL;
 		}else{
-			if(i!=1){
+
+			if(idMiembro!=myId){
 				strcat(contenido,", ");
+				auxMiembrosGrupo[i]=gestor->usuariosRegistrados[idMiembro-1];
+				char idComoString2[5];
+				sprintf(idComoString2,"%d",idMiembro);
+				strcat(contenido, idComoString2);
+
+				char* mensaje=(char*)malloc(MAXCONT*sizeof(char));
+				strcat(mensaje,"Talker ");
+				strcat(mensaje,idComoString2);
+				strcat(mensaje," forma parte del grupo ");
+				strcat(mensaje,id);
+				mensajes[i-1]=mensaje;
+				
 			}
-			auxMiembrosGrupo[i-1]=gestor->usuariosRegistrados[idMiembro-1];
-			char idComoString2[5];
-			sprintf(idComoString2,"%d",idMiembro);
-			strcat(contenido, idComoString2);
 		}
 	}
-	char* id=(char*)malloc(MAXWORDS*sizeof(char));
-	strcat(id,"G");
-	strcat(id,idComoString);
-	struct group* nuevoGrupo=Group(id,tamanoVectorArgumentos-1,auxMiembrosGrupo);
+	
+	struct group* nuevoGrupo=Group(id,tamanoVectorArgumentos,auxMiembrosGrupo);
+	enviarMensajeAsincronoAGrupoDiferente(gestor,myId,auxMiembrosGrupo,tamanoVectorArgumentos,mensajes);
 	gestor->grupos[gestor->cantidadGrupos]=nuevoGrupo;
 	gestor->cantidadGrupos++;
 
 	return contenido;
+}
+char* listarGrupo(manager* gestor,int myId,char** vectorArgumentos){
+
+	char* contenido=(char*)malloc(MAXCONT*sizeof(char));
+	strcat(contenido,"Los integrantes del grupo ");
+	strcat(contenido, vectorArgumentos[1]);
+	strcat(contenido, "son: ");
+	int encontrado=0;
+	if(gestor->cantidadGrupos==0){
+		free(contenido);
+		return "No hay grupos registrados actualmente";
+	}
+	for (int i = 0; i < gestor->cantidadGrupos; ++i)
+	{
+		printf("en gestor %s y en vector %s\n",gestor->grupos[i]->id, vectorArgumentos[1]);
+		if(strcmp(gestor->grupos[i]->id,vectorArgumentos[1])==0){
+			printf("se encontroooooooo\n");
+
+			for (int j = 0; j < gestor->grupos[i]->cantidadMiembros; ++j)
+			{
+				char myIdComoString[5];
+				sprintf(myIdComoString,"%d",gestor->grupos[i]->miembros[j]->id);
+				if(encontrado){
+					strcat(contenido, ", ");
+				}
+				encontrado=1;
+				strcat(contenido,myIdComoString);
+			}
+			return contenido;
+
+		}
+	}
+	free(contenido);
+	return NULL;
+	
+}
+char* enviarMensajeAmigo(manager* gestor, int myId,char** vectorArgumentos, int tamanoVectorArgumentos){
+	int idAmigo=atoi(vectorArgumentos[tamanoVectorArgumentos-1]);
+	char* contenido=(char*)malloc(MAXCONT*sizeof(char));
+	strcat(contenido,"Talker ");
+	char myIdComoString[5];
+	sprintf(myIdComoString,"%d",myId);
+	strcat(contenido,myIdComoString);
+	strcat(contenido, " envia: ");
+	for (int i = 1; i < tamanoVectorArgumentos-1; ++i)
+	{
+		strcat(contenido,vectorArgumentos[i]);
+		strcat(contenido," ");
+	}
+	if(gestor->usuariosRegistrados[myId-1]->amigos[idAmigo-1]==NULL){
+		free(contenido);
+		return NULL;
+	}else if(gestor->usuariosRegistrados[myId-1]->amigos[idAmigo-1]->conectado==0){
+		free(contenido);
+		return "El usuario especificado no se encuentra conectado en este momento";
+	}else{
+		enviarMensajeAsincrono(gestor, idAmigo, contenido);
+		return "El mensaje ha sido enviado satisfactoriamente";
+	}
+}
+char* enviarMensajeGrupo(manager* gestor, int myId,char** vectorArgumentos, int tamanoVectorArgumentos){
+	char* idGrupo=vectorArgumentos[tamanoVectorArgumentos-1];
+	char* contenido=(char*)malloc(MAXCONT*sizeof(char));
+	for (int i = 1; i < tamanoVectorArgumentos-1; ++i)
+	{
+		strcat(contenido,vectorArgumentos[i]);
+		strcat(contenido," ");
+	}
+	strcat(contenido," viene de ");
+	strcat(contenido, idGrupo);
+	int pertenece=0;
+	for (int i = 0; i < gestor->cantidadGrupos; ++i)
+	{
+		if(strcmp(gestor->grupos[i]->id,idGrupo)==0){
+
+			for (int j = 0; j < gestor->grupos[i]->cantidadMiembros; ++j)
+			{
+				if(gestor->grupos[i]->miembros[j]->id==myId){
+					pertenece=1;
+				}
+			}
+			if(pertenece){
+
+				enviarMensajeAsincronoAGrupo(gestor,myId,gestor->grupos[i]->miembros,gestor->grupos[i]->cantidadMiembros,contenido);
+				return contenido;
+
+			}else{
+
+				return "No puede hacer esto ya que no pertenece a este grupo";	
+			}
+			
+		}
+	}
+	return NULL;
+
 }
 struct reply* procesar_operacion(int operacion, char** vectorArgumentos, struct request* solicitud, manager* gestor, int tamanoVectorArgumentos)
 {
@@ -324,13 +511,19 @@ struct reply* procesar_operacion(int operacion, char** vectorArgumentos, struct 
 		}
 	}
 	if(operacion==3){
-		
+		char*  contenido = listarGrupo(gestor,solicitud->myId,vectorArgumentos);
+		if(contenido==NULL){
+			return Reply("No se encontro el grupo especificado",0,gestor->usuariosRegistrados[solicitud->myId-1]->nomPipe,0);
+		}else{
+			return Reply(contenido,1,gestor->usuariosRegistrados[solicitud->myId-1]->nomPipe,0);
+		}
 	}
 	if(operacion==4){
 		char* contenido = agregarAmigo(gestor,solicitud->myId,vectorArgumentos);
 		if(contenido==NULL){
 			return Reply("El usuario especificado no se encuentra en el sistema",0,gestor->usuariosRegistrados[solicitud->myId-1]->nomPipe,0);
 		}else{
+			
 			return Reply(contenido,0,gestor->usuariosRegistrados[solicitud->myId-1]->nomPipe,0);
 		}
 	}
@@ -343,10 +536,21 @@ struct reply* procesar_operacion(int operacion, char** vectorArgumentos, struct 
 		}
 	}
 	if(operacion==6){
+		char* contenido=enviarMensajeAmigo(gestor, solicitud->myId,vectorArgumentos, tamanoVectorArgumentos);
+		if(contenido==NULL){
+			return Reply("El usuario especificado no es amigo",0,gestor->usuariosRegistrados[solicitud->myId-1]->nomPipe,0);
+		}else{
+			return Reply(contenido,0,gestor->usuariosRegistrados[solicitud->myId-1]->nomPipe,0);
+		}
 		
 	}
 	if(operacion==7){
-		
+		char* contenido=enviarMensajeGrupo(gestor, solicitud->myId,vectorArgumentos, tamanoVectorArgumentos);
+		if(contenido==NULL){
+			return Reply("El grupo especificado no existe",0,gestor->usuariosRegistrados[solicitud->myId-1]->nomPipe,0);
+		}else{
+			return Reply(contenido,0,gestor->usuariosRegistrados[solicitud->myId-1]->nomPipe,0);
+		}
 	}
 	if(operacion==8){
 		cerrarSesion(gestor,solicitud->myId);

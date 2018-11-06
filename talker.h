@@ -1,5 +1,5 @@
 #include <stdio.h>
-#define maxline 10
+#define maxline 30
 
 
 struct talker
