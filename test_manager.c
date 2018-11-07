@@ -18,6 +18,10 @@ int main(int argc, char *argv[])
 	char* nomPipe=argv[2];
 	/*Creacion del manager*/
 	struct manager* gestor=Manager(maximoDeUsuarios,nomPipe);
+  /*Impresion para informar*/
+
+
+  printf("Manager iniciado y el sistema podra tener como maximo %d usuarios\n",maximoDeUsuarios);
 	/*Creacion del PIPE*/
 	crearPipeManager(nomPipe);
   	/*Conexión a PIPE en modo lectura*/
@@ -37,13 +41,14 @@ int main(int argc, char *argv[])
   	do{
     	/*Leer la solicitud de los talkers*/
     	solicitud=(struct request*)malloc(sizeof(struct request));
+      //printf("Esperando solicitud...");
     	flag=read(lectura,solicitud,sizeof(request));
     	if(flag!=0)
       {
         
-        printf("Id %d\n", solicitud->myId);   
-        printf("Pid %d\n", solicitud->myPid);
-        printf("tipo %d\n", solicitud->tipo);
+        //printf("Id %d\n", solicitud->myId);   
+        //printf("Pid %d\n", solicitud->myPid);
+        //printf("tipo %d\n", solicitud->tipo);
       
         /*Realizar los cambios necesarios en GESTOR y generar la respuesta de la solicitud anterior*/
         struct reply* respuesta=procesarSolicitud(gestor, solicitud);//aqui se imprime el mensaje que debe aparecer en la consola del manager
@@ -72,18 +77,16 @@ int validarArgumentos(int argc, char* argv[]){
 
 void enviarRespuesta(struct reply* respuesta) {
 
-	
-
-  	int creado=0, escritura;
-  	do {
-    	escritura = open (respuesta->nomPipe, O_WRONLY|O_NONBLOCK);
-    	if (escritura == -1) {
-        perror("pipe");
-        printf(" Se volvera a intentar despues\n");
-        printf("PIPE %s\n",respuesta->nomPipe);
-        sleep(1);
-    	} else creado = 1;
-  } while (creado == 0);
+  int creado=0, escritura;
+  do{
+  	escritura = open (respuesta->nomPipe, O_WRONLY|O_NONBLOCK);
+    if (escritura == -1) {
+    perror("pipe");
+    printf(" Se volvera a intentar despues\n");
+    printf("PIPE %s\n",respuesta->nomPipe);
+    sleep(1);
+    } else creado = 1;
+  }while (creado == 0);
   write(escritura,respuesta,sizeof(struct reply));
   int flag;
   if(respuesta->eliminacionDePipe){

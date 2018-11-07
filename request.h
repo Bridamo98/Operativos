@@ -32,7 +32,7 @@ struct request* Request(int myId, int myPid, char* argumentos, int tipo){
 	
 	//solicitud->argumentos=argumentos;
 	strcpy(solicitud->argumentos,argumentos);
-	printf("pipe en request %s\n",solicitud->argumentos);
+	//printf("pipe en request %s\n",solicitud->argumentos);
 	solicitud->tipo=tipo;
 	return (solicitud);
 }

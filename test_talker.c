@@ -17,9 +17,12 @@ int validarArgumentos(int argc, char* argv[]);
 void signalHandler ()
 {
   char* mensaje=(char*)malloc(MAXCONT*sizeof(char));
-  printf("entra a manejador\n");
+  //printf("entra a manejador\n");
   int flag=read(lectura,mensaje,MAXCONT*sizeof(char));
+  printf("\n>------------------------<\n");
   printf("%s\n", mensaje);
+  printf("^------------------------^\n");
+  printf("Ingrese la operacion(Help):\n");
 }
 
 int main(int argc, char *argv[])
@@ -55,12 +58,12 @@ int main(int argc, char *argv[])
     /*Creación del pipe por donde el manager retornará las respuestas*/
     crearPipeTalker(nomPipeDeLectura);
   	/*Envio al PIPE principal la solicitud de conexion*/
-  	printf("pipe como string %s\n", nomPipeDeLectura);//bandera
+  	//printf("pipe como string %s\n", nomPipeDeLectura);//bandera
   	struct request* solicitud=Request(myId,getpid(),nomPipeDeLectura,0);
-  	printf("despues de guardar en request %s\n", solicitud->argumentos);//bandera
-    printf("antes de escribir\n");//bandera
+  	//printf("despues de guardar en request %s\n", solicitud->argumentos);//bandera
+    //printf("antes de escribir\n");//bandera
   	flag=write(escritura,solicitud,sizeof(struct request));
-    printf("despues de escribir\n");//bandera
+    //printf("despues de escribir\n");//bandera
       
   	/*Conexion al PIPE de recepcion de respuestas*/ 
   	
@@ -76,10 +79,12 @@ int main(int argc, char *argv[])
   	/*Lectura del PIPE secundario a la respuesta del envio anterior*/
   	struct reply* respuesta=(struct reply*)malloc(sizeof(struct reply));
   	flag=read(lectura,respuesta,sizeof(struct reply));
+    printf(">------------------------<\n");
   	printf("%s\n", respuesta->contenido);//bandera
+    printf("^------------------------^\n");
     /*Validar si el talker continuará en ejecución o no*/
     int salir;
-    printf("eliminacionDePipe %d\n", respuesta->eliminacionDePipe);
+    //printf("eliminacionDePipe %d\n", respuesta->eliminacionDePipe);
     if(respuesta->validacionDePeticion==0){
       salir=0;
     }else{
@@ -90,10 +95,11 @@ int main(int argc, char *argv[])
     char* cadena_operacion;
     while(salir){
       cadena_operacion = (char*)malloc(MAXARG*sizeof(char));
-      printf("Ingrese la operacion(comando) a realizar(puede apoyarse con el comando Help):");
+      printf("Ingrese la operacion(Help):\n");
       fgets (cadena_operacion, MAXARG, stdin);
       cadena_operacion[strcspn(cadena_operacion,"\n")]=0;
       if(strcmp(cadena_operacion,"Help")==0){
+        printf(">------------------------<\n");
         printf("1.List\n");
         printf("2.List friends\n");
         printf("3.List GID\n");
@@ -102,13 +108,16 @@ int main(int argc, char *argv[])
         printf("6.Sent msg IDi\n");
         printf("7.Sent msg GroupID\n");
         printf("8.Salir\n");
+        printf("^------------------------^\n");
       }else{
         //printf("cadena_operacion: %s\n", cadena_operacion);
         solicitud = Request(myId,getpid(),cadena_operacion,1);
         flag = write(escritura,solicitud,sizeof(struct request));
         respuesta=(struct reply*)malloc(sizeof(struct reply));
         flag=read(lectura,respuesta,sizeof(struct reply));
+        printf(">------------------------<\n");
         printf("%s\n", respuesta->contenido);
+        printf("^------------------------^\n");
         free(cadena_operacion);
         if(respuesta->eliminacionDePipe){
           salir=0;

@@ -25,7 +25,7 @@ struct talker* Talker(int id, int pid, int cantMaxAmigos,char* nomPipe){
 	}
 	usuario->nomPipe=(char*)malloc(maxline*sizeof(char));
 	strcpy(usuario->nomPipe,nomPipe);
-	printf("NOBRE PIPE %s\n", usuario->nomPipe);
+	//printf("NOBRE PIPE %s\n", usuario->nomPipe);
 	usuario->conectado=1;
 	usuario->cantidadAmigos=0;
 	usuario->cantMaxAmigos=cantMaxAmigos;
