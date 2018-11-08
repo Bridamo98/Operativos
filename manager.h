@@ -199,6 +199,7 @@ char* lista_usuarios_conectados(manager* gestor, int myId)
 {
 	char* contenido = (char*)malloc(MAXCONT*sizeof(char));
 	//contenido = "Los usuario actualmente conectados en el sistema son: ";
+	strcpy(contenido,"");
 	struct talker** talkers = gestor->usuariosRegistrados;
 	//printf ("tamaño %d\n", gestor->cantidadRegistrados);
 	int tam = gestor->maximoDeUsuarios;
@@ -250,7 +251,7 @@ void cerrarSesion(manager* gestor,int myId){
 char* agregarAmigo(manager* gestor,int myId,char** vectorArgumentos){
 	int idAmigo=atoi(vectorArgumentos[1]);
 	char* contenido=(char*)malloc(MAXCONT*sizeof(char));
-	
+	strcpy(contenido,"");
 	if(myId==idAmigo){
 		free(contenido);
 		printf("Error logico.Se devuelve error.\n");
@@ -301,6 +302,7 @@ char* agregarAmigo(manager* gestor,int myId,char** vectorArgumentos){
 char* obtenerAmigos(manager* gestor,int myId){
 	char* contenido = (char*)malloc(MAXCONT*sizeof(char));
 	//contenido = "Los usuario actualmente conectados en el sistema son: ";
+	strcpy(contenido,"");
 	struct talker** amigos = gestor->usuariosRegistrados[myId-1]->amigos;
 	//printf ("tamaño %d\n", gestor->cantidadRegistrados);
 	int tam = gestor->usuariosRegistrados[myId-1]->cantMaxAmigos;
@@ -338,7 +340,8 @@ char* obtenerAmigos(manager* gestor,int myId){
 char* crearGrupo(manager* gestor, char** vectorArgumentos, int myId, int tamanoVectorArgumentos){
 	struct  talker** auxMiembrosGrupo=(struct talker**)malloc((tamanoVectorArgumentos)*sizeof(struct talker*));
 	char* contenido=(char*)malloc(MAXCONT*sizeof(char));
-
+	//printf("aquiiii\n");
+	strcpy(contenido,"");
 	char** mensajes=(char**)malloc((tamanoVectorArgumentos-1)*sizeof(char*));
 
 
@@ -364,9 +367,10 @@ char* crearGrupo(manager* gestor, char** vectorArgumentos, int myId, int tamanoV
 		free(auxMiembrosGrupo);
 		free(contenido);
 		printf("La cantidad de amigos especificados(%d) supera al numero de amigos (%d) del Talker %d.Se devuelve error.\n",tamanoVectorArgumentos-1, gestor->usuariosRegistrados[myId-1]->cantidadAmigos,myId);
-		contenido=(char*)malloc(50*sizeof(char));
-		contenido="Error: La cantidad de amigos especificados supera al numero de amigos del Talker";
-		return contenido;
+		char* contenido2=(char*)malloc(50*sizeof(char));
+		strcpy(contenido2,"");
+		strcat(contenido2,"Error: La cantidad de amigos especificados supera al numero de amigos del Talker");
+		return contenido2;
 	}
 	for (int i = 1; i < tamanoVectorArgumentos; ++i)
 	{
@@ -376,17 +380,21 @@ char* crearGrupo(manager* gestor, char** vectorArgumentos, int myId, int tamanoV
 			free(contenido);
 
 			printf("Uno de los IDs especificados(%s) es un ID invalido.Se devuelve error.\n",vectorArgumentos[i]);
-			contenido=(char*)malloc(50*sizeof(char));
-			contenido="Error: Uno de los IDs especificados es un ID invalido";
-			return contenido;
+			char* contenido3=(char*)malloc(50*sizeof(char));
+			strcpy(contenido3,"");
+			strcat(contenido3,"Error: Uno de los IDs especificados es un ID invalido");
+			return contenido3;
 		}
 		if(gestor->usuariosRegistrados[myId-1]->amigos[idMiembro-1]==NULL){
 			free(auxMiembrosGrupo);
 			free(contenido);
 			printf("Uno de los Talkers especificados(%d) no es amigo del Talker %d.Se devuelve error.\n",idMiembro,myId);
-			contenido=(char*)malloc(50*sizeof(char));
-			contenido="Error: Uno de los Talkers especificados (que conforman el grupo) no es amigo del Talker";
-			return contenido;
+			char* contenido4=(char*)malloc(100*sizeof(char));
+			strcpy(contenido4,"");
+			//printf("PAILASSS\n");
+			strcat(contenido4,"Error: Uno de los Talkers especificados (que conforman el grupo) no es amigo del Talker");
+			//printf("PAILASSS\n");
+			return contenido4;
 		}else{
 
 			if(idMiembro!=myId){
@@ -397,6 +405,7 @@ char* crearGrupo(manager* gestor, char** vectorArgumentos, int myId, int tamanoV
 				strcat(contenido, idComoString2);
 
 				char* mensaje=(char*)malloc(MAXCONT*sizeof(char));
+				strcpy(mensaje,"");
 				strcat(mensaje,"Talker ");
 				strcat(mensaje,idComoString2);
 				strcat(mensaje," forma parte del grupo ");
@@ -418,6 +427,7 @@ char* crearGrupo(manager* gestor, char** vectorArgumentos, int myId, int tamanoV
 char* listarGrupo(manager* gestor,int myId,char** vectorArgumentos){
 
 	char* contenido=(char*)malloc(MAXCONT*sizeof(char));
+	strcpy(contenido,"");
 	strcat(contenido,"Los integrantes del grupo ");
 	strcat(contenido, vectorArgumentos[1]);
 	strcat(contenido, " son: ");
@@ -453,6 +463,7 @@ char* listarGrupo(manager* gestor,int myId,char** vectorArgumentos){
 char* enviarMensajeAmigo(manager* gestor, int myId,char** vectorArgumentos, int tamanoVectorArgumentos){
 	int idAmigo=atoi(vectorArgumentos[tamanoVectorArgumentos-1]);
 	char* contenido=(char*)malloc(MAXCONT*sizeof(char));
+	strcpy(contenido,"");
 	strcat(contenido,"Talker ");
 	char myIdComoString[5];
 	sprintf(myIdComoString,"%d",myId);
@@ -471,6 +482,7 @@ char* enviarMensajeAmigo(manager* gestor, int myId,char** vectorArgumentos, int 
 		//free(contenido);
 		printf("El Talker %s no se encuentra conectado.Se devuelve error.\n", vectorArgumentos[tamanoVectorArgumentos-1]);
 		char* contenido2=(char*)malloc(50*sizeof(char));
+		strcpy(contenido,"");
 		strcat(contenido2,"Error: El Talker ");
 		strcat(contenido2,vectorArgumentos[tamanoVectorArgumentos-1]);
 		strcat(contenido2," no es un amigo.");
@@ -484,6 +496,7 @@ char* enviarMensajeAmigo(manager* gestor, int myId,char** vectorArgumentos, int 
 char* enviarMensajeGrupo(manager* gestor, int myId,char** vectorArgumentos, int tamanoVectorArgumentos){
 	char* idGrupo=vectorArgumentos[tamanoVectorArgumentos-1];
 	char* contenido=(char*)malloc(MAXCONT*sizeof(char));
+	strcpy(contenido,"");
 	for (int i = 1; i < tamanoVectorArgumentos-1; ++i)
 	{
 		strcat(contenido,vectorArgumentos[i]);
@@ -547,6 +560,7 @@ struct reply* procesar_operacion(int operacion, char** vectorArgumentos, struct 
 		if(contenido==NULL){
 			printf("No existe el grupo %s.Se devuelve error.\n",vectorArgumentos[1]);
 			char* contenido2=(char*)malloc(50*sizeof(char));
+			strcpy(contenido2,"");
 			strcat(contenido2,"Error: No se encontro el grupo ");
 			strcat(contenido2,vectorArgumentos[1]);
 			return Reply(contenido2,0,gestor->usuariosRegistrados[solicitud->myId-1]->nomPipe,0);
@@ -561,6 +575,7 @@ struct reply* procesar_operacion(int operacion, char** vectorArgumentos, struct 
 		if(contenido==NULL){
 			printf("No existe el Talker %s.Se devuelve error.\n",vectorArgumentos[1]);
 			contenido=(char*)malloc(30*sizeof(char));
+			strcpy(contenido,"");
 			strcat(contenido,"Error: No se encontro el Talker ");
 			strcat(contenido,vectorArgumentos[1]);
 			return Reply(contenido,0,gestor->usuariosRegistrados[solicitud->myId-1]->nomPipe,0);
@@ -591,6 +606,7 @@ struct reply* procesar_operacion(int operacion, char** vectorArgumentos, struct 
 		char* contenido=enviarMensajeAmigo(gestor, solicitud->myId,vectorArgumentos, tamanoVectorArgumentos);
 		if(contenido==NULL){
 			char* contenido2=(char*)malloc(50*sizeof(char));
+			strcpy(contenido2,"");
 			strcat(contenido2,"Error: El talker ");
 			strcat(contenido2,vectorArgumentos[tamanoVectorArgumentos-1]);
 			strcat(contenido2," no es amigo.");
@@ -626,6 +642,7 @@ struct reply* procesarSolicitud(struct manager* gestor,struct request* solicitud
 	char maxUsuariosComoString[5];
 	sprintf(maxUsuariosComoString,"%d",gestor->maximoDeUsuarios);
 	char* contenido=(char*)malloc(100*sizeof(char));
+	strcpy(contenido,"");
 	if(solicitud->tipo==0){//INICIO DE SESION (O REGISTRO) DE UN TALKER
 		//printf("inicio de sesion o registro\n");
 		if(solicitud->myId>=1 && solicitud->myId<=gestor->maximoDeUsuarios){//validar que el id se encuentre en el rango permitido
